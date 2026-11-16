@@ -1,0 +1,21 @@
+node_modules/
+www-build/
+dist/
+
+# Llave de firma de la app y su contraseña: NUNCA al repositorio (sin ella no se pueden publicar actualizaciones)
+keystore/
+keystore.properties
+*.jks
+*.keystore
+
+# Configuración de Firebase de cada proyecto (se descarga de la consola de Firebase)
+android/app/google-services.json
+
+# Generados por Gradle / Android Studio
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+android/.idea/
+*.iml

@@ -1,0 +1,22 @@
+{
+  "name": "dubss-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicación Android de la DUBSS: un contenedor nativo (Capacitor) que carga el sistema y le agrega notificaciones push.",
+  "scripts": {
+    "sync": "cap sync android",
+    "apk": "powershell -ExecutionPolicy Bypass -File ./build-apk.ps1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/push-notifications": "^6.0.3",
+    "@capacitor/splash-screen": "^6.0.3",
+    "@capacitor/status-bar": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0",
+    "typescript": "^5.5.4"
+  }
+}

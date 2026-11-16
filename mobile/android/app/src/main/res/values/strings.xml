@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DUBSS</string>
+    <string name="title_activity_main">DUBSS</string>
+    <string name="package_name">bo.edu.uagrm.dubss</string>
+    <string name="custom_url_scheme">bo.edu.uagrm.dubss</string>
+</resources>

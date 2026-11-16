@@ -1,0 +1,11 @@
+* text=auto
+# Scripts que se ejecutan en Linux/macOS: nunca convertir a saltos de línea de Windows
+gradlew text eol=lf
+*.sh text eol=lf
+# Binarios
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary
+*.jks binary
+*.keystore binary
