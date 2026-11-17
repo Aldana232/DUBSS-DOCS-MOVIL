@@ -88,6 +88,9 @@ Avisos de la DUBSS por WhatsApp (recordatorios de partidos, reprogramaciones, av
 * **De punta a punta con n8n real** y un WhatsApp simulado: Django → n8n → mensaje con el formato de la API de Meta; firma incorrecta o ausente → 401; solo recibe quien aceptó; saltos de línea limpiados; consulta entrante `PARTIDOS` respondida; número no registrado → instrucciones; `BAJA` → deja de recibir y queda en bitácora; **con n8n detenido el aviso queda en cola y se entrega al volver**.
 * Lo único no probado es el envío a los servidores reales de Meta (requiere tu cuenta y tus credenciales).
 
+## En producción
+El servicio `n8n` forma parte del compose de producción (`deploy/compose.yaml`, perfil `n8n`) con la versión **1.123.27** (probada con los dos flujos). Solo el webhook `/webhook/whatsapp` es público (a través de Caddy); el editor queda en `127.0.0.1:5678` y se abre con un túnel SSH. Guía completa: `deploy/README.md` del repositorio del sistema.
+
 ## Operación y problemas frecuentes
 
 | Síntoma | Causa y solución |

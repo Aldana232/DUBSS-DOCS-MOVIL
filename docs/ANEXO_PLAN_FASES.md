@@ -474,3 +474,36 @@ Backend: **1190 pruebas, cobertura 95 %** (14 nuevas de este módulo: estado, ac
 * Los textos son un **borrador de referencia** redactado con lo que el sistema realmente hace; el plazo de respuesta (10 días hábiles) y el contacto del responsable son supuestos que la DUBSS/UAGRM debe confirmar y la Asesoría Jurídica debe revisar. Al ajustarlos, subir `LEGAL_VERSION` en backend y frontend.
 * La aceptación se exige en la interfaz y queda registrada, pero la API no rechaza peticiones de quien no aceptó (hacerlo rompería la planilla sin conexión y a los clientes ya instalados).
 * No hay trámite automático de eliminación de datos: se solicita por correo.
+
+# 19. Preparación para producción (F7-14)
+Guía operativa en el repositorio del sistema: `deploy/README.md`.
+
+## 19.1 Análisis previo (lo que impedía desplegar)
+* El compose de «producción» heredado usaba los ajustes de **desarrollo** (DEBUG activo, `ALLOWED_HOSTS=*`, debug toolbar) y exponía PostgreSQL (5432) y Django (8000).
+* **129 avisos de vulnerabilidades** en Python (Django 5.0.6 sin soporte, Pillow 10.4, DRF, requests, protobuf, simplejwt) y **1 crítica** en Next.js 14.2.5 (la línea 14 ya no recibe parches).
+* `SECURE_SSL_REDIRECT=True` sin `SECURE_PROXY_SSL_HEADER`: detrás de un proxy, un **bucle infinito de redirecciones**.
+* Sin endpoint de salud, sin respaldos, sin HTTPS, sin n8n, sin `.dockerignore` (las imágenes arrastraban `node_modules`, `.next` y secretos locales) y con los modelos de IA guardados dentro del contenedor (se perdían en cada despliegue).
+* Código: la duplicación real era mínima (0,09 % en el backend y 0,14 % en el frontend), por lo que **no se reescribió nada**: se eliminó lo repetido (mixin de auditoría −90 líneas, mixin de rangos, helper de partidos, componentes compartidos) y el código muerto.
+
+## 19.2 Qué se hizo
+* **Dependencias:** Django 5.0.6 → **5.2.19 LTS**, DRF 3.18.3, Pillow 13, requests 2.34, protobuf 6.33, simplejwt 5.5, OR-Tools 9.15, numpy 2.5, scikit-learn 1.9, pandas 2.3 (se mantiene en 2.x: OR-Tools lo exige y la 3.x cambia comportamientos). `pip-audit`: de 129 avisos a **0**. Frontend: Next 14.2.5 → **15.5.29**, zod 3 → 4 (+ `@hookform/resolvers` 5), axios, js-cookie; `npm audit`: de 12 (1 crítica) a 2 (el PostCSS que Next trae para compilar, sin efecto en ejecución). `constraints.txt` fija las **versiones exactas, incluidas las indirectas**, para que las compilaciones sean reproducibles.
+* **Carpeta `deploy/`:** `compose.yaml` (solo Caddy expuesto, 80/443), `Caddyfile` (HTTPS automático con Let's Encrypt, cabeceras de seguridad, webhook público solo de WhatsApp), `.env.production.example`, respaldo diario (PostgreSQL + subidas, retención 14 días), scripts (`instalar-servidor`, `generar-env`, `desplegar`, `primer-inicio`, `respaldar-ahora`, `restaurar`, `estado`) y guía paso a paso.
+* **Producción endurecida:** `config.settings.production` con `SECURE_PROXY_SSL_HEADER`, cookies `Secure`, HSTS, API solo JSON, documentación de la API apagada, ruta del admin configurable (`ADMIN_URL`), endpoint `/api/health/`, logs en JSON. La API de Django **no es pública**: solo Next.js la consume.
+* **Primer inicio sin datos de ejemplo:** `cargar_catalogos` (12 facultades, 4 deportes, 8 categorías) y `crear_superadmin` (contraseña validada), ambos idempotentes.
+* Imágenes más livianas: backend 992 MB (vs 1,9 GB), frontend 359 MB; proceso sin privilegios (gosu).
+
+## 19.3 Defectos que solo apareció al probar la imagen real (todos corregidos)
+1. **Volúmenes con dueño `root`:** Django no podía guardar fotos (500). El arranque corrige el dueño y baja a un usuario sin privilegios.
+2. **Celery se reiniciaba en bucle** (faltaba `packaging`; en desarrollo lo traían las herramientas de prueba): las tareas programadas nunca habrían corrido. Declarado y fijado con `constraints.txt`; `desplegar.sh` ahora espera al worker.
+3. **URLs de fotos con el host interno** (`http://backend:8000/...`): Next ahora reenvía el host y protocolo públicos.
+4. Aviso del «control server» de Gunicorn (deshabilitado) y script de restauración que aceptaba un nombre vacío / perdía la entrada estándar.
+5. Next 15: `params` asíncrono y `req.ip` eliminado; zod 4: tipos de entrada/salida en los formularios; `CheckConstraint.check` → `condition` (Django 6).
+
+## 19.4 Verificación
+* Backend: **1215 pruebas** correctas, cobertura 95 %; `pyflakes`, `makemigrations --check` y `check --deploy` limpios.
+* Frontend: `tsc`, `lint` y `build` correctos.
+* **Stack de producción completo probado en la PC** (base vacía): 94 migraciones desde cero, primer inicio, superficie pública (API, Swagger y editor de n8n inalcanzables), HTTPS con redirección 308 y HSTS, cookies `httpOnly` + `Secure`, subida y descarga de fotos, formularios de campeonato, usuario y resultado con zod 4, **respaldo y restauración** (un usuario borrado volvió), Celery estable (0 reinicios) y n8n 1.123.27 de punta a punta (aviso saliente y consulta entrante por el webhook público).
+* Consumo medido del stack completo en reposo: ≈ 1,4 GB.
+
+## 19.5 Pendiente (depende de la institución)
+Cuenta en la nube y tarjeta, dominio (idealmente un subdominio de la UAGRM), credenciales de correo, clave de Groq, Firebase y Meta (opcionales), y la revisión jurídica de los textos legales. Aún no se probó un certificado real de Let's Encrypt (requiere el dominio apuntando a un servidor público).
